@@ -218,7 +218,17 @@ class PromoChecker {
             this.showToast(`⚠️ Phát hiện ${duplicates.length} mã trùng lặp, sẽ chỉ kiểm tra ${uniqueCodes.length} mã duy nhất`, 'info');
         }
         
-        // Token validation removed - using server-side token from Vercel env
+        const token = this.authTokenInput.value.trim();
+        if (!token) {
+            this.showToast('Vui lòng nhập Authorization Token', 'error');
+            this.authTokenInput.focus();
+            return;
+        }
+        
+        if (!this.validateToken(token)) {
+            this.showToast('Token không hợp lệ. Vui lòng kiểm tra lại!', 'error');
+            return;
+        }
 
         this.isRunning = true;
         this.abortController = new AbortController();
@@ -326,10 +336,15 @@ class PromoChecker {
             
     this.addResultToTable(tempResult);
 
-            const response = await fetch(`/api/check?code=${encodeURIComponent(code)}`, {
-      method: 'GET',
-      signal: this.abortController.signal
-    });
+            const token = this.authTokenInput.value.trim();
+            const response = await fetch(`/backend-api/promotions/metadata/${code}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json, */*',
+                    'Authorization': `Bearer ${token}`
+                },
+                signal: this.abortController.signal
+            });
 
     let result;
     if (response.ok) {

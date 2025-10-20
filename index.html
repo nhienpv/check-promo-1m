@@ -40,11 +40,11 @@
                     <input type="number" id="delay" value="500" min="0" max="5000" step="100">
                 </div>
                 
-                <!-- Token input hidden - using server-side token from Vercel env -->
-                <div class="setting-group token-group" style="display: none;">
+                <!-- Token input for Netlify (uses backend-api proxy) -->
+                <div class="setting-group token-group">
                     <label for="authToken">Authorization Token:</label>
                     <div class="token-input-container">
-                        <input type="password" id="authToken" placeholder="Server-side token" style="min-width: 300px;">
+                        <input type="password" id="authToken" placeholder="Nhập Bearer token từ ChatGPT..." style="min-width: 300px;">
                         <button type="button" class="btn btn-outline" id="toggleTokenBtn" title="Hiện/Ẩn token">
                             <span class="material-icons">visibility</span>
                         </button>
