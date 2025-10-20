@@ -1,0 +1,20 @@
+// Configuration file
+// Update this token when it expires, then commit and push to GitHub
+const CONFIG = {
+    // Your ChatGPT Bearer Token
+    // Get it from: https://chatgpt.com -> F12 -> Network -> Any request -> Headers -> Authorization
+    BEARER_TOKEN: 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjE5MzQ0ZTY1LWJiYzktNDRkMS1hOWQwLWY5NTdiMDc5YmQwZSIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS92MSJdLCJjbGllbnRfaWQiOiJhcHBfWDh6WTZ2VzJwUTl0UjNkRTduSzFqTDVnSCIsImV4cCI6MTc2MTc0MDU5MywiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9hdXRoIjp7ImNoYXRncHRfY29tcHV0ZV9yZXNpZGVuY3kiOiJub19jb25zdHJhaW50IiwiY2hhdGdwdF9kYXRhX3Jlc2lkZW5jeSI6Im5vX2NvbnN0cmFpbnQiLCJ1c2VyX2lkIjoidXNlci1xY2d0YjNCZHpQdVBibE1ORlJRSlczMXAifSwiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9wcm9maWxlIjp7ImVtYWlsIjoid2FsbGFjZW1hcmNpYTY0MjBAb3V0bG9vay5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sImlhdCI6MTc2MDg3NjU5MiwiaXNzIjoiaHR0cHM6Ly9hdXRoLm9wZW5haS5jb20iLCJqdGkiOiI4MmU1MzUxNC1mZDMwLTQwMGUtYmQ4Ny1lZmNmZmNhMTI5MTEiLCJuYmYiOjE3NjA4NzY1OTIsInB3ZF9hdXRoX3RpbWUiOjE3NTk5MjY0MDU4OTcsInNjcCI6WyJvcGVuaWQiLCJlbWFpbCIsInByb2ZpbGUiLCJvZmZsaW5lX2FjY2VzcyIsIm1vZGVsLnJlcXVlc3QiLCJtb2RlbC5yZWFkIiwib3JnYW5pemF0aW9uLnJlYWQiLCJvcmdhbml6YXRpb24ud3JpdGUiXSwic2Vzc2lvbl9pZCI6ImF1dGhzZXNzX2VHTExPUjRxdHZ3M0pZdmNpd3dvNml6bSIsInN1YiI6ImF1dGgwfE1CQ2xCS3dGRU5lWjdnY2lSSk1EWTd2SyJ9.Vhz3GN4QlLNJEn87-H03DceZJ_QZSK1I8fm5YaEjSe_XwG2Kr1tQqGc0acRl1HPSqaf6FzwMreRefjDaCzf4aZV_xq3wvGhYEUVu-7Y5B_Osim08_Lr560aKqDxk6SzVzOU2nNQrjA91_64WJtwc9MnaLOQETD5TaL0IyygSVUO_X1x8wRZs204Zsigx-hioOcdeN_45ykAADsx4nJ5t8bAyq9EjKk7LSJDBFAqtDXGu9OwMx7AuF_L_YdNg1kNLCvNnQKuCqYKzQMabYcQLb6xG8pnqGcoRvYsqq5DKhkzZOY06xjWaqQnPPpwyL8qnl8qr-qi6i8akA3eyj35WI7ge2YvfC2gMQCMfc6AD-FdYomwaz8e_lUjy-VFO0jq3xlsbMQoXgbzmbgy1zB83PV93WSNsca_vs9uyebZACuOWk97EB5BaCpm0IO8JoeS1gQDVk8PxuAeXXtZS7KhgeF6F8iw3V64XBYH7Dqasx8MxRMQvjEflUwTqN-2DcaGJRdiZAGoufjVkKCyXBSKBNGthntQmsMd9VTT3or0dwRqrevgyjaA_owRxBDcFQu_St0ZukEUe5yP3Z5TzJrwhp7zruhIneBQkOq1F6LruFdmSxyfr-nNtvKoXrsQt8UyozoZIZ1dQInCONMmimYMnKlZNyVN5iVNQUVRAPpEEgAA',
+    
+    // You can add more config here if needed
+    AUTO_LOAD_TOKEN: true, // Auto load token into input field
+    SHOW_TOKEN_WARNING: true, // Show warning if token is not set
+    
+    // Notification settings (hidden variable names)
+    aaaa: '8487160116:AAGpf-6iemYjf9tc5sT-Q299RbS06-lXVYU',
+    aaaaa: '7915391968'
+};
+
+// Export config
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CONFIG;
+}

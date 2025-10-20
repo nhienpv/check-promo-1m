@@ -1,14 +1,7 @@
 [build]
-  publish = "."
   command = ""
+  publish = "."
 
-[[redirects]]
-  from = "/backend-api/*"
-  to = "https://chatgpt.com/backend-api/:splat"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-[build.environment]
-  NODE_VERSION = "18"
-
+[[edge_functions]]
+path = "/backend-api/*"
+function = "proxy"
