@@ -1,6 +1,6 @@
 # ChatGPT Promo Checker
 
-App kiểm tra mã khuyến mãi ChatGPT với Netlify Edge Functions.
+App kiểm tra mã khuyến mãi ChatGPT với Netlify Edge Functions và Environment Variables.
 
 ## 🚀 Deploy lên Netlify
 
@@ -13,22 +13,33 @@ App kiểm tra mã khuyến mãi ChatGPT với Netlify Edge Functions.
 3. Chọn repo: **check-promo-1m**
 4. Deploy!
 
-## ⚙️ Cấu hình
+## ⚙️ Environment Variables (Netlify Dashboard)
 
-Token và Telegram config được lấy từ file `config.js`:
+Sau khi deploy, vào **Site settings** → **Environment variables** và thêm:
 
-```javascript
-const CONFIG = {
-    BEARER_TOKEN: 'your_token_here',
-    aaaa: 'telegram_bot_token',
-    aaaaa: 'telegram_chat_id'
-};
-```
+| Variable | Mô tả | Ví dụ |
+|----------|-------|-------|
+| `OPENAI_BEARER` | ChatGPT Bearer Token (bắt buộc) | `eyJhbGciOiJSUzI1NiIs...` |
+| `TG_BOT_TOKEN` | Telegram Bot Token (tùy chọn) | `1234567890:ABC...` |
+| `TG_CHAT_ID` | Telegram Chat ID (tùy chọn) | `123456789` |
+
+### Cách lấy Token:
+
+1. **ChatGPT Token**: 
+   - Vào https://chatgpt.com
+   - F12 → Network → Any request → Headers → Authorization
+   - Copy Bearer token
+
+2. **Telegram Bot**:
+   - Chat với @BotFather
+   - `/newbot` → Chọn tên → Lấy token
+   - Chat ID: Chat với bot → F12 → Network → Lấy chat_id
 
 ## 📋 Kết quả phân loại
 
 - **LIVE (Singapore/Malaysia)**: Mã còn hạn, user chưa dùng
 - **INELIGIBLE (Vietnam)**: Mã còn hạn, user đã là subscriber
+- **DEAD**: Mã hết hạn hoặc không tồn tại
 - **DEAD**: Mã hết hạn hoặc không tồn tại
 
 ## 📱 Telegram Format

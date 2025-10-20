@@ -1,29 +1,31 @@
-module.exports = async (req, res) => {
+export default async (request, context) => {
   // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  const headers = {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  };
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   }
 
-  const { results } = req.body || {};
+  const { results } = await request.json();
   const bot = process.env.TG_BOT_TOKEN;
   const chat = process.env.TG_CHAT_ID;
 
   if (!bot || !chat) {
-    return res.status(400).json({ error: 'Missing Telegram config' });
+    return new Response(JSON.stringify({ error: 'Missing Telegram config' }), { status: 400, headers });
   }
 
   if (!Array.isArray(results) || results.length === 0) {
-    return res.status(200).json({ ok: true, skipped: true });
+    return new Response(JSON.stringify({ ok: true, skipped: true }), { status: 200, headers });
   }
 
   // Format message
@@ -65,12 +67,12 @@ module.exports = async (req, res) => {
 
     if (!response.ok) {
       const error = await response.text();
-      return res.status(502).json({ error: 'Telegram error', detail: error });
+      return new Response(JSON.stringify({ error: 'Telegram error', detail: error }), { status: 502, headers });
     }
 
-    return res.status(200).json({ ok: true, sent: results.length });
+    return new Response(JSON.stringify({ ok: true, sent: results.length }), { status: 200, headers });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
   }
 };
 

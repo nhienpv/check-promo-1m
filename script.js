@@ -413,13 +413,7 @@ class PromoChecker {
 
     // Add notification to queue and schedule batch send
     sendNotification(result) {
-        // Get configuration
-        const aaaa = CONFIG.aaaa;
-        const aaaaa = CONFIG.aaaaa;
-        
-        if (!aaaa || !aaaaa) return; // Skip if not configured
-        
-        // Add to queue
+        // Add to queue (no need to check config here, API will handle it)
         this.notificationQueue.push(result);
         
         // Clear existing timer if any
@@ -438,49 +432,22 @@ class PromoChecker {
         if (this.notificationQueue.length === 0) return;
         
         try {
-            const aaaa = CONFIG.aaaa;
-            const aaaaa = CONFIG.aaaaa;
-            
-            if (!aaaa || !aaaaa) return;
-            
-            // Build message with all codes
-            let message = `🎯 *Kết quả kiểm tra mã* 🎯\n\n`;
-            
-            // Group by status
-            const liveCodesVN = this.notificationQueue.filter(r => r.status === 'INELIGIBLE');
-            const liveCodesSG = this.notificationQueue.filter(r => r.status === 'LIVE');
-            
-            if (liveCodesVN.length > 0) {
-                message += `✅ *Mã LIVE (Vietnam):* ${liveCodesVN.length} mã\n`;
-                liveCodesVN.forEach(r => {
-                    message += `├ 🕐 ${r.timestamp}\n`;
-                    message += `└ 🔗 https://chatgpt.com/p/${r.code}\n`;
-                    message += `   📝 ${r.details}\n\n`;
-                });
-            }
-            
-            if (liveCodesSG.length > 0) {
-                message += `✅ *Mã LIVE (Singapore/Malaysia):* ${liveCodesSG.length} mã\n`;
-                liveCodesSG.forEach(r => {
-                    message += `├ 🕐 ${r.timestamp}\n`;
-                    message += `└ 🔗 https://chatgpt.com/p/${r.code}\n`;
-                    message += `   📝 ${r.details}\n\n`;
-                });
-            }
-            
-            // Send to external service
-            const url = `https://api.telegram.org/bot${aaaa}/sendMessage`;
-            await fetch(url, {
+            // Send to our API endpoint instead of direct Telegram
+            const response = await fetch('/api/notify', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    chat_id: aaaaa,
-                    text: message,
-                    parse_mode: 'Markdown'
+                    results: this.notificationQueue
                 })
             });
+            
+            if (response.ok) {
+                console.log('✅ Sent Telegram notification');
+            } else {
+                console.warn('⚠️ Failed to send Telegram notification');
+            }
             
             // Clear queue after sending
             this.notificationQueue = [];
@@ -608,27 +575,27 @@ class PromoChecker {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    // Load token from config.js
+    // Load token from config.js (now loaded from Netlify environment variables)
     loadTokenFromConfig() {
         try {
             if (typeof CONFIG !== 'undefined' && CONFIG.BEARER_TOKEN) {
-                // Check if token is not the default placeholder
-                if (CONFIG.BEARER_TOKEN !== 'YOUR_CHATGPT_BEARER_TOKEN_HERE' && CONFIG.AUTO_LOAD_TOKEN) {
+                // Check if token is not empty and AUTO_LOAD_TOKEN is enabled
+                if (CONFIG.BEARER_TOKEN.trim() !== '' && CONFIG.AUTO_LOAD_TOKEN) {
                     this.authTokenInput.value = CONFIG.BEARER_TOKEN;
-                    console.log('✅ Token loaded from config.js');
+                    console.log('✅ Token loaded from Netlify environment variables');
                     
                     // Validate token (silent - no toast)
                     if (!this.validateToken(CONFIG.BEARER_TOKEN)) {
-                        console.warn('⚠️ Token may be expired. Please update config.js');
+                        console.warn('⚠️ Token may be expired. Please update Netlify environment variables');
                     }
-                } else if (CONFIG.BEARER_TOKEN === 'YOUR_CHATGPT_BEARER_TOKEN_HERE') {
-                    console.error('⚠️ Please update BEARER_TOKEN in config.js');
+                } else if (CONFIG.BEARER_TOKEN.trim() === '') {
+                    console.error('⚠️ Please set OPENAI_BEARER in Netlify environment variables');
                     // Show warning only if token not set
-                    this.showToast('⚠️ Token chưa được cấu hình. Vui lòng cập nhật config.js', 'error');
+                    this.showToast('⚠️ Token chưa được cấu hình. Vui lòng cập nhật Netlify environment variables', 'error');
                 }
             }
         } catch (error) {
-            console.warn('Could not load token from config.js:', error);
+            console.warn('Could not load token from config:', error);
         }
     }
     
@@ -1321,9 +1288,21 @@ class LanguageManager {
 let promoChecker;
 let languageManager;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Initialize language manager first
     languageManager = new LanguageManager();
+    
+    // Wait for config to load from Netlify environment variables
+    await new Promise(resolve => {
+        const checkConfig = () => {
+            if (typeof CONFIG !== 'undefined' && CONFIG.BEARER_TOKEN !== undefined) {
+                resolve();
+            } else {
+                setTimeout(checkConfig, 100);
+            }
+        };
+        checkConfig();
+    });
     
     // Then initialize promo checker
     promoChecker = new PromoChecker();
