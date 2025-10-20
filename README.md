@@ -1,18 +1,29 @@
 # ChatGPT Promo Checker
 
-App kiểm tra mã khuyến mãi ChatGPT với Vercel Serverless Functions.
+App kiểm tra mã khuyến mãi ChatGPT với Netlify Edge Functions.
 
-## 🚀 Đã Deploy
+## 🚀 Deploy lên Netlify
 
-**URL**: https://empva.vercel.app
+**GitHub Repo**: https://github.com/nhienpv/check-promo-1m
 
-## ⚙️ Environment Variables (Vercel Dashboard)
+### Bước deploy:
 
-| Variable | Mô tả |
-|----------|-------|
-| `OPENAI_BEARER` | ChatGPT Bearer Token (bắt buộc) |
-| `TG_BOT_TOKEN` | Telegram Bot Token (tùy chọn) |
-| `TG_CHAT_ID` | Telegram Chat ID (tùy chọn) |
+1. Vào: https://app.netlify.com/start
+2. Import from Git → GitHub
+3. Chọn repo: **check-promo-1m**
+4. Deploy!
+
+## ⚙️ Cấu hình
+
+Token và Telegram config được lấy từ file `config.js`:
+
+```javascript
+const CONFIG = {
+    BEARER_TOKEN: 'your_token_here',
+    aaaa: 'telegram_bot_token',
+    aaaaa: 'telegram_chat_id'
+};
+```
 
 ## 📋 Kết quả phân loại
 
