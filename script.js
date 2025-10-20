@@ -1,6 +1,24 @@
 // Danh sách các mã promotion mặc định (có một số mã trùng để test)
 const defaultPromoCodes = [
-    'BS7SHXWT5ZS4VB52',
+    'XSFQV3K8KRYPZXJ6',
+    'WQEH43BBQEZBB8PW',
+    'UC8AAA2F67GPLUPZ',
+    'QHRS8VNTZZSR6U9N',
+    'QJLH5VL2DFLWZ9UF',
+    'XSFQV3K8KRYPZXJ6', // Trùng với mã đầu tiên
+    'SL5TTDM984BPMMT7',
+    'HVPXX2JH6HA8BYJB',
+    'BVB8VW6LU9KAQV9A',
+    'RUPRZLFESXS56SVZ',
+    'WQEH43BBQEZBB8PW', // Trùng với mã thứ 2
+    'EM34ZS2Z2B3RAPV5',
+    '5KLPL7D23BCG452E',
+    'GALGX598VM6K6HTL',
+    '7NH3A58ZLNX8BQUL',
+    // Ví dụ URL format (có một URL trùng)
+    'https://chatgpt.com/?promoCode=BS7SHXWT5ZS4VB52',
+    'https://chatgpt.com/?promoCode=KUC6JKQX9WFPGJWV',
+    'https://chatgpt.com/p/5SQRHY32XRMW3FX5',
     'https://chatgpt.com/?promoCode=BS7SHXWT5ZS4VB52' // URL trùng
 ];
 
@@ -12,10 +30,7 @@ class PromoChecker {
         this.currentFilter = 'all';
         this.searchQuery = '';
         this.abortController = null;
-        
-        // Telegram notification batching
-        this.notificationQueue = [];
-        this.notificationTimer = null;
+        this.notificationQueue = [];  // Queue for batch Telegram notifications
         
         this.initializeElements();
         this.bindEvents();
@@ -47,8 +62,7 @@ class PromoChecker {
         // Filter elements
         this.searchInput = document.getElementById('searchInput');
         this.filterBtns = document.querySelectorAll('.filter-btn');
-        this.exportVietnamBtn = document.getElementById('exportVietnamBtn');
-        this.exportSingaporeBtn = document.getElementById('exportSingaporeBtn');
+        this.exportBtn = document.getElementById('exportBtn');
         this.resultsCountEl = document.getElementById('resultsCount');
         
         // Input elements
@@ -63,9 +77,6 @@ class PromoChecker {
     }
 
     bindEvents() {
-        // Load token from config.js if available
-        this.loadTokenFromConfig();
-        
         // Control events
         this.startBtn.addEventListener('click', () => this.startChecking());
         this.stopBtn.addEventListener('click', () => this.stopChecking());
@@ -78,8 +89,7 @@ class PromoChecker {
         this.filterBtns.forEach(btn => {
             btn.addEventListener('click', (e) => this.handleFilter(e.target.dataset.filter));
         });
-        this.exportVietnamBtn.addEventListener('click', () => this.exportResults('vietnam'));
-        this.exportSingaporeBtn.addEventListener('click', () => this.exportResults('singapore'));
+        this.exportBtn.addEventListener('click', () => this.exportResults());
         
         // Input events
         this.promoCodesInput.addEventListener('input', () => this.updateCodesCount());
@@ -116,34 +126,27 @@ class PromoChecker {
     extractPromoCode(input) {
         const trimmedInput = input.trim();
         
-        // Method 1: Check for /p/ pattern (with or without https://)
-        const pPathMatch = trimmedInput.match(/(?:https?:\/\/)?(?:www\.)?chatgpt\.com\/p\/([A-Z0-9]{16,})/i);
-        if (pPathMatch && pPathMatch[1]) {
-            const code = pPathMatch[1];
-            return code.substring(code.length - 16);
-        }
-        
-        // Method 2: Check if it's a full URL (with https://)
+        // Check if it's a URL
         if (trimmedInput.startsWith('http://') || trimmedInput.startsWith('https://')) {
             try {
                 const url = new URL(trimmedInput);
                 
-                // Extract from promoCode parameter (chatgpt.com/?promoCode=XXXX)
+                // Method 1: Extract from promoCode parameter
                 const promoParam = url.searchParams.get('promoCode');
                 if (promoParam && promoParam.length >= 16) {
                     return promoParam.substring(promoParam.length - 16);
                 }
                 
-                // Extract last segment from path if it looks like a code
+                // Method 2: Extract last 16 characters from path (for /p/ format)
                 const path = url.pathname;
                 if (path.length >= 16) {
                     const lastSegment = path.split('/').pop();
-                    if (lastSegment && lastSegment.length >= 16 && /^[A-Z0-9]+$/i.test(lastSegment)) {
+                    if (lastSegment && lastSegment.length >= 16) {
                         return lastSegment.substring(lastSegment.length - 16);
                     }
                 }
                 
-                // Extract last 16 characters from the entire URL as fallback
+                // Method 3: Extract last 16 characters from the entire URL
                 const cleanUrl = trimmedInput.replace(/[^A-Z0-9]/gi, '');
                 if (cleanUrl.length >= 16) {
                     return cleanUrl.substring(cleanUrl.length - 16);
@@ -154,12 +157,7 @@ class PromoChecker {
             }
         }
         
-        // Method 3: If it's just a plain code (16+ alphanumeric characters)
-        if (/^[A-Z0-9]{16,}$/i.test(trimmedInput)) {
-            return trimmedInput.substring(trimmedInput.length - 16);
-        }
-        
-        // If not a URL or extraction failed, return the input as-is
+        // If not a URL or extraction failed, return the input as-is (assume it's already a code)
         return trimmedInput;
     }
 
@@ -220,17 +218,7 @@ class PromoChecker {
             this.showToast(`⚠️ Phát hiện ${duplicates.length} mã trùng lặp, sẽ chỉ kiểm tra ${uniqueCodes.length} mã duy nhất`, 'info');
         }
         
-        const token = this.authTokenInput.value.trim();
-        if (!token) {
-            this.showToast('Vui lòng nhập Authorization Token', 'error');
-            this.authTokenInput.focus();
-            return;
-        }
-        
-        if (!this.validateToken(token)) {
-            this.showToast('Token không hợp lệ. Vui lòng kiểm tra lại!', 'error');
-            return;
-        }
+        // Token validation removed - using server-side token from Vercel env
 
         this.isRunning = true;
         this.abortController = new AbortController();
@@ -246,7 +234,7 @@ class PromoChecker {
         const delay = parseInt(this.delayInput.value);
 
         this.progressTextEl.textContent = `Đang kiểm tra ${uniqueCodes.length} mã với ${concurrency} luồng...`;
-        this.showToast(`Start checking ${uniqueCodes.length} mã promotion`, 'info');
+        this.showToast(`Bắt đầu kiểm tra ${uniqueCodes.length} mã promotion`, 'info');
 
         try {
             await this.checkCodesWithConcurrency(uniqueCodes, concurrency, delay);
@@ -260,11 +248,7 @@ class PromoChecker {
             this.updateUI();
             this.progressTextEl.textContent = 'Hoàn thành kiểm tra';
             
-            // Send any remaining notifications immediately when checking completes
-            if (this.notificationTimer) {
-                clearTimeout(this.notificationTimer);
-                this.notificationTimer = null;
-            }
+            // Send batch Telegram notification
             if (this.notificationQueue.length > 0) {
                 this.sendBatchNotification();
             }
@@ -278,15 +262,6 @@ class PromoChecker {
             this.updateUI();
             this.progressTextEl.textContent = 'Đã dừng kiểm tra';
             this.showToast('Đã dừng kiểm tra', 'info');
-            
-            // Send any remaining notifications immediately
-            if (this.notificationTimer) {
-                clearTimeout(this.notificationTimer);
-                this.notificationTimer = null;
-            }
-            if (this.notificationQueue.length > 0) {
-                this.sendBatchNotification();
-            }
         }
     }
 
@@ -340,122 +315,128 @@ class PromoChecker {
 
    async checkSingleCode(code, index) {
   try {
+            // Thêm vào bảng với trạng thái "đang kiểm tra"
     const tempResult = {
-      code,
+                code: code,
       status: 'CHECKING',
       details: 'Đang kiểm tra...',
       timestamp: new Date().toLocaleTimeString(),
-      index
+                index: index
     };
+            
     this.addResultToTable(tempResult);
 
-    const token = this.authTokenInput.value.trim();
-
-    const response = await fetch(`/api/check/${code}`, {
-		method: 'GET',
-		signal: this.abortController.signal 
-	});
+            const response = await fetch(`/api/check?code=${encodeURIComponent(code)}`, {
+      method: 'GET',
+      signal: this.abortController.signal
+    });
 
     let result;
     if (response.ok) {
       const data = await response.json();
 
-      if (data?.metadata && data.is_eligible === true) {
-        const discount = data.metadata.discount?.percentage ?? 0;
-        const duration = data.metadata.duration?.num_periods ?? 0;
-        const period   = data.metadata.duration?.period ?? '';
+                // Debug: Log full response for analysis (uncomment for debugging)
+                // console.log(`🔍 DEBUG RESPONSE for ${code}:`, data);
+                // console.log(`- metadata:`, data.metadata);
+                // console.log(`- is_eligible:`, data.is_eligible);
+                // console.log(`- ineligible_reason:`, data.ineligible_reason);
+                
+                if (data.metadata && data.is_eligible === true) {
+                    const discount = data.metadata.discount?.percentage || 0;
+                    const duration = data.metadata.duration?.num_periods || 0;
+                    const period = data.metadata.duration?.period || '';
+                    const summary = data.metadata.summary || '';
+                    
         result = {
-          code, status: 'LIVE',
-          details: `${discount}% off for ${duration} ${period} - Mã Singapo/Malaysia`,
-          timestamp: new Date().toLocaleTimeString(), index
-        };
-        // Send notification for LIVE code
-        this.sendNotification(result);
-      } else if (data?.ineligible_reason) {
+                        code: code,
+                        status: 'LIVE',
+                        details: `${discount}% off for ${duration} ${period} - ${summary}`,
+                        timestamp: new Date().toLocaleTimeString(),
+                        index: index
+                    };
+                    // Add to Telegram queue
+                    this.notificationQueue.push(result);
+                } else if (data.ineligible_reason) {
+                    // Phân biệt các loại lỗi
         const reason = data.ineligible_reason;
-        const map = {
-          user_not_eligible: ['INELIGIBLE', '100% off for 1 month - Mã Việt Nam'],
-          invalid_promo_code: ['DEAD', 'Mã không hợp lệ hoặc đã hết hạn']
-        };
-        const [status, details] = map[reason.code] || ['DEAD', reason.message || 'Lỗi không xác định'];
-        result = { code, status, details, timestamp: new Date().toLocaleTimeString(), index };
-        // Send notification for INELIGIBLE code
+                    let status, details;
+                    
+                    if (reason.code === 'user_not_eligible') {
+                        status = 'INELIGIBLE';
+                        details = 'Mã còn hạn nhưng tài khoản đã là subscriber';
+                    } else if (reason.code === 'invalid_promo_code') {
+                        status = 'DEAD';
+                        details = 'Mã không hợp lệ hoặc đã hết hạn';
+                    } else {
+                        status = 'DEAD';
+                        details = reason.message || 'Lỗi không xác định';
+                    }
+                    
+                    result = {
+                        code: code,
+                        status: status,
+                        details: details,
+                        timestamp: new Date().toLocaleTimeString(),
+                        index: index
+                    };
+                    // Add INELIGIBLE to Telegram queue
         if (status === 'INELIGIBLE') {
-          this.sendNotification(result);
+                        this.notificationQueue.push(result);
         }
       } else {
-        result = { code, status: 'DEAD', details: 'Mã không hợp lệ hoặc đã hết hạn', timestamp: new Date().toLocaleTimeString(), index };
+                    result = {
+                        code: code,
+                        status: 'DEAD',
+                        details: 'Mã không hợp lệ hoặc đã hết hạn',
+                        timestamp: new Date().toLocaleTimeString(),
+                        index: index
+                    };
       }
     } else {
-      result = { code, status: 'DEAD', details: `HTTP Error ${response.status}`, timestamp: new Date().toLocaleTimeString(), index };
-    }
+                result = {
+                    code: code,
+                    status: 'DEAD',
+                    details: `HTTP Error ${response.status}`,
+                    timestamp: new Date().toLocaleTimeString(),
+                    index: index
+                };
+            }
+
     return result;
 
   } catch (error) {
-    if (error.name === 'AbortError') throw error;
+            if (error.name === 'AbortError') {
+                throw error;
+            }
 
     let errorDetails = 'Network Error';
+            
+            // Detailed error handling
     if (error.message.includes('Failed to fetch')) {
-      errorDetails = 'CORS/Network Error – kiểm tra proxy hoặc kết nối';
+                errorDetails = 'CORS Error - Cần bypass CORS hoặc dùng proxy';
+                // Show CORS help modal after first few errors
       setTimeout(() => {
-        if (this.results.filter(r => r.details.includes('CORS')).length >= 3) this.showCORSModal();
+                    if (this.results.filter(r => r.details.includes('CORS Error')).length >= 3) {
+                        this.showCORSModal();
+                    }
       }, 1000);
+            } else if (error.message.includes('NetworkError')) {
+                errorDetails = 'Lỗi mạng - Kiểm tra kết nối internet';
     } else if (error.message.includes('timeout')) {
       errorDetails = 'Request timeout - Thử tăng delay';
     } else {
       errorDetails = `Error: ${error.message}`;
-    }
-    return { code, status: 'DEAD', details: errorDetails, timestamp: new Date().toLocaleTimeString(), index };
-  }
-}
-
-    // Add notification to queue and schedule batch send
-    sendNotification(result) {
-        
-        // Add to queue
-        this.notificationQueue.push(result);
-        
-        // Clear existing timer if any
-        if (this.notificationTimer) {
-            clearTimeout(this.notificationTimer);
+            }
+            
+            return {
+                code: code,
+                status: 'DEAD',
+                details: errorDetails,
+                timestamp: new Date().toLocaleTimeString(),
+                index: index
+            };
         }
-        
-        // Set new timer for 60 seconds
-        this.notificationTimer = setTimeout(() => {
-            this.sendBatchNotification();
-        }, 60000); // 60 seconds
     }
-    
-    // Send all queued notifications in one message
-    async sendBatchNotification() {
-    if (this.notificationQueue.length === 0) return;
-
-    try {
-        // Không dùng token Telegram ở client nữa
-        // Gửi toàn bộ queue sang server (Vercel) để xử lý
-        const payload = { results: this.notificationQueue };
-
-        const response = await fetch('/api/notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Notify API error:', errorText);
-        }
-
-        // Xóa hàng đợi sau khi gửi
-        this.notificationQueue = [];
-        this.notificationTimer = null;
-
-    } catch (error) {
-        console.log('Notification error:', error);
-        // Không làm gián đoạn quá trình chính
-    }
-}
-
 
     addResult(result) {
         // Tìm và cập nhật kết quả tạm thời
@@ -488,22 +469,10 @@ class PromoChecker {
     }
 
     createTableRowHTML(result) {
-        // Both LIVE and INELIGIBLE show as green "LIVE" badges
-        let statusClass, statusIcon, statusLabel;
-        
-        if (result.status === 'LIVE' || result.status === 'INELIGIBLE') {
-            statusClass = 'live';
-            statusIcon = 'check_circle';
-            statusLabel = 'LIVE';
-        } else if (result.status === 'DEAD') {
-            statusClass = 'dead';
-            statusIcon = 'cancel';
-            statusLabel = 'DEAD';
-        } else {
-            statusClass = 'checking';
-            statusIcon = 'hourglass_empty';
-            statusLabel = result.status;
-        }
+        const statusClass = result.status.toLowerCase();
+        const statusIcon = result.status === 'LIVE' ? 'check_circle' : 
+                          result.status === 'DEAD' ? 'cancel' : 
+                          result.status === 'INELIGIBLE' ? 'block' : 'hourglass_empty';
         
         return `
             <td>${result.index}</td>
@@ -511,7 +480,7 @@ class PromoChecker {
             <td>
                 <span class="status-badge ${statusClass}">
                     <span class="material-icons" style="font-size: 14px;">${statusIcon}</span>
-                    ${statusLabel}
+                    ${result.status}
                 </span>
             </td>
             <td class="details-cell" title="${result.details}">${result.details}</td>
@@ -551,7 +520,7 @@ class PromoChecker {
         const percentage = Math.round((completed / total) * 100);
         this.progressPercentEl.textContent = `${percentage}%`;
         this.progressFillEl.style.width = `${percentage}%`;
-        this.progressTextEl.textContent = `Checked ${completed}/${total} mã`;
+        this.progressTextEl.textContent = `Đã kiểm tra ${completed}/${total} mã`;
     }
 
     updateUI() {
@@ -572,30 +541,6 @@ class PromoChecker {
 
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
-    }
-    
-    // Load token from config.js
-    loadTokenFromConfig() {
-        try {
-            if (typeof CONFIG !== 'undefined' && CONFIG.BEARER_TOKEN) {
-                // Check if token is not the default placeholder
-                if (CONFIG.BEARER_TOKEN !== 'YOUR_CHATGPT_BEARER_TOKEN_HERE' && CONFIG.AUTO_LOAD_TOKEN) {
-                    this.authTokenInput.value = CONFIG.BEARER_TOKEN;
-                    console.log('✅ Token loaded from config.js');
-                    
-                    // Validate token (silent - no toast)
-                    if (!this.validateToken(CONFIG.BEARER_TOKEN)) {
-                        console.warn('⚠️ Token may be expired. Please update config.js');
-                    }
-                } else if (CONFIG.BEARER_TOKEN === 'YOUR_CHATGPT_BEARER_TOKEN_HERE') {
-                    console.error('⚠️ Please update BEARER_TOKEN in config.js');
-                    // Show warning only if token not set
-                    this.showToast('⚠️ Token chưa được cấu hình. Vui lòng cập nhật config.js', 'error');
-                }
-            }
-        } catch (error) {
-            console.warn('Could not load token from config.js:', error);
-        }
     }
     
     // Token management functions
@@ -674,7 +619,7 @@ class PromoChecker {
 
         this.showToast('🔄 Đang kiểm tra token...', 'info');
         
-        // Debug: Show token infoF
+        // Debug: Show token info
         console.log('🔍 TOKEN DEBUG INFO:');
         console.log('- Length:', token.length);
         console.log('- First 30 chars:', token.substring(0, 30) + '...');
@@ -821,67 +766,33 @@ class PromoChecker {
             this.abortController = new AbortController();
             const result = await this.checkSingleCode(code, 0);
             this.addResult(result);
-            this.showToast(`Checked code: ${code}`, 'success');
+            this.showToast(`Đã kiểm tra lại mã: ${code}`, 'success');
         } catch (error) {
             this.showToast(`Lỗi khi kiểm tra lại: ${error.message}`, 'error');
         }
     }
 
-    exportResults(type = 'all') {
+    exportResults() {
         if (this.results.length === 0) {
             this.showToast('Không có kết quả để xuất', 'error');
             return;
         }
 
-        let filteredResults = [];
-        let fileName = '';
-        
-        if (type === 'vietnam') {
-            // INELIGIBLE = Vietnam codes
-            filteredResults = this.results.filter(r => r.status === 'INELIGIBLE');
-            fileName = `promo-codes-vietnam-${new Date().getTime()}.txt`;
-            
-            if (filteredResults.length === 0) {
-                this.showToast('Không có mã Việt Nam để xuất', 'error');
-                return;
-            }
-        } else if (type === 'singapore') {
-            // LIVE = Singapore/Malaysia codes
-            filteredResults = this.results.filter(r => r.status === 'LIVE');
-            fileName = `promo-codes-singapore-malaysia-${new Date().getTime()}.txt`;
-            
-            if (filteredResults.length === 0) {
-                this.showToast('Không có mã Singapore/Malaysia để xuất', 'error');
-                return;
-            }
-        } else {
-            filteredResults = this.results;
-            fileName = `promo-codes-all-${new Date().getTime()}.txt`;
-        }
-
-        // Generate content with URL format
-        const content = this.generateTxtUrls(filteredResults);
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+        const csvContent = this.generateCSV();
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         
         if (link.download !== undefined) {
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
-            link.setAttribute('download', fileName);
+            link.setAttribute('download', `promo-check-results-${new Date().getTime()}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
-            const typeName = type === 'vietnam' ? 'Việt Nam' : type === 'singapore' ? 'Singapore/Malaysia' : 'tất cả';
-            this.showToast(`Đã xuất ${filteredResults.length} mã ${typeName} thành công`, 'success');
+            this.showToast('Đã xuất kết quả thành công', 'success');
         }
-    }
-    
-    generateTxtUrls(results) {
-        // Generate list of URLs in format: https://chatgpt.com/p/(code)
-        const urls = results.map(result => `https://chatgpt.com/p/${result.code}`);
-        return urls.join('\n');
     }
 
     generateCSV() {
@@ -939,7 +850,6 @@ class PromoChecker {
             const moreText = duplicates.length > 3 ? ` và ${duplicates.length - 3} mã khác` : '';
             this.showToast(`🔄 Mã trùng lặp: ${duplicateList}${moreText}`, 'warning');
         }
-
     }
 
     // Remove duplicates from input
@@ -981,354 +891,31 @@ class PromoChecker {
             }
         });
     }
-}
-
-// Language Translations
-const translations = {
-    vi: {
-        // Headers
-        'Công Cụ Kiểm Tra Mã Khuyến Mãi Đa Luồng': 'Multi-threaded Promotion Code Validator',
-        
-        // Control Panel
-        'Số luồng đồng thời:': 'Số luồng đồng thời:',
-        'Concurrent threads:': 'Số luồng đồng thời:',
-        '3 luồng': '3 luồng',
-        '5 luồng': '5 luồng',
-        '10 luồng': '10 luồng',
-        '15 luồng': '15 luồng',
-        '3 threads': '3 luồng',
-        '5 threads': '5 luồng',
-        '10 threads': '10 luồng',
-        '15 threads': '15 luồng',
-        'Delay giữa các request (ms):': 'Delay giữa các request (ms):',
-        'Delay between requests (ms):': 'Delay giữa các request (ms):',
-        'Authorization Token:': 'Authorization Token:',
-        'Nhập Bearer token (bắt buộc)...': 'Nhập Bearer token (bắt buộc)...',
-        'Hiện/Ẩn token': 'Hiện/Ẩn token',
-        'Hướng dẫn lấy token': 'Hướng dẫn lấy token',
-        'Kiểm tra token': 'Kiểm tra token',
-        'Bắt đầu kiểm tra': 'Start Checking',
-        'Start Checking': 'Bắt đầu kiểm tra',
-        'Dừng lại': 'Dừng lại',
-        'Stop': 'Dừng lại',
-        
-        // Stats
-        'Mã LIVE': 'Mã LIVE',
-        'LIVE Codes': 'Mã LIVE',
-        'Mã DEAD': 'Mã DEAD', 
-        'DEAD Codes': 'Mã DEAD',
-        'Mã INELIGIBLE': 'Mã INELIGIBLE',
-        'INELIGIBLE': 'INELIGIBLE',
-        'Tổng số': 'Tổng số',
-        'Total': 'Tổng số',
-        'Tỷ lệ thành công': 'Tỷ lệ thành công',
-        'Success Rate': 'Tỷ lệ thành công',
-        'Mã trùng lặp': 'Mã trùng lặp',
-        'Duplicates': 'Mã trùng lặp',
-        
-        // Progress
-        'Sẵn sàng kiểm tra...': 'Sẵn sàng kiểm tra...',
-        'Ready to check...': 'Sẵn sàng kiểm tra...',
-        
-        // Filters
-        'Tìm kiếm mã promotion...': 'Tìm kiếm mã promotion...',
-        'Search promotion codes...': 'Tìm kiếm mã promotion...',
-        'Tất cả': 'Tất cả',
-        'All': 'Tất cả',
-        'Đang kiểm tra': 'Đang kiểm tra',
-        'Checking': 'Đang kiểm tra',
-        'Xuất Mã Việt Nam': 'Xuất Mã Việt Nam',
-        'Export Vietnam Codes': 'Xuất Mã Việt Nam',
-        'Xuất Mã Singapore/Malaysia': 'Xuất Mã Singapore/Malaysia',
-        'Export Singapore/Malaysia Codes': 'Xuất Mã Singapore/Malaysia',
-        
-        // Results
-        'Kết quả kiểm tra': 'Kết quả kiểm tra',
-        'Check Results': 'Kết quả kiểm tra',
-        '0 kết quả': '0 kết quả',
-        '0 results': '0 kết quả',
-        'STT': 'STT',
-        'No.': 'STT',
-        'Mã Promotion': 'Mã Promotion',
-        'Promo Code': 'Mã Promotion',
-        'Trạng thái': 'Trạng thái',
-        'Status': 'Trạng thái',
-        'Chi tiết': 'Chi tiết',
-        'Details': 'Chi tiết',
-        'Thời gian': 'Thời gian',
-        'Time': 'Thời gian',
-        'Thao tác': 'Thao tác',
-        'Actions': 'Thao tác',
-        'List of duplicate codes': 'Danh sách mã trùng lặp',
-        // Input
-        'Danh sách mã promotion': 'Danh sách mã promotion',
-        'Promotion Codes List': 'Danh sách mã promotion',
-        'Loại bỏ trùng': 'Loại bỏ trùng',
-        'Remove Duplicates': 'Loại bỏ trùng',
-        'Xóa tất cả': 'Xóa tất cả',
-        'Clear All': 'Xóa tất cả',
-        'Thêm mã mẫu': 'Thêm mã mẫu',
-        'Add Samples': 'Thêm mã mẫu',
-        
-        // Messages
-        '0 mã': '0 mã',
-        '0 codes': '0 mã',
-        
-    },
-    en: {
-        // Headers
-        'Multi-threaded Promotion Code Validator': 'Multi-threaded Promotion Code Validator',
-        
-        // Control Panel
-        'Số luồng đồng thời:': 'Concurrent threads:',
-        'Concurrent threads:': 'Concurrent threads:',
-        '3 luồng': '3 threads',
-        '5 luồng': '5 threads', 
-        '10 luồng': '10 threads',
-        '15 luồng': '15 threads',
-        '3 threads': '3 threads',
-        '5 threads': '5 threads',
-        '10 threads': '10 threads',
-        '15 threads': '15 threads',
-        'Delay giữa các request (ms):': 'Delay between requests (ms):',
-        'Delay between requests (ms):': 'Delay between requests (ms):',
-        'Authorization Token:': 'Authorization Token:',
-        'Nhập Bearer token (bắt buộc)...': 'Enter Bearer token (required)...',
-        'Hiện/Ẩn token': 'Show/Hide token',
-        'Hướng dẫn lấy token': 'Get token guide',
-        'Kiểm tra token': 'Test token',
-        'Start Checking': 'Start Checking',
-        'Dừng lại': 'Stop',
-        'Stop': 'Stop',
-        
-        // Stats
-        'Mã LIVE': 'LIVE Codes',
-        'LIVE Codes': 'LIVE Codes',
-        'Mã DEAD': 'DEAD Codes',
-        'DEAD Codes': 'DEAD Codes',
-        'Mã INELIGIBLE': 'INELIGIBLE',
-        'INELIGIBLE': 'INELIGIBLE',
-        'Tổng số': 'Total',
-        'Total': 'Total',
-        'Tỷ lệ thành công': 'Success Rate',
-        'Success Rate': 'Success Rate',
-        'Mã trùng lặp': 'Duplicates',
-        'Duplicates': 'Duplicates',
-        'Hoàn thành kiểm tra': 'Checking completed',
-        'Đã kiểm tra': 'Checked',
-        'Đang kiểm tra': 'Checking',
-        'Danh sách mã trùng lặp': 'List of duplicate codes',
-        // Progress
-        'Sẵn sàng kiểm tra...': 'Ready to check...',
-        'Ready to check...': 'Ready to check...',
-        
-        // Filters
-        'Tìm kiếm mã promotion...': 'Search promotion codes...',
-        'Search promotion codes...': 'Search promotion codes...',
-        'Tất cả': 'All',
-        'All': 'All',
-        'Đang kiểm tra': 'Checking',
-        'Checking': 'Checking',
-        'Xuất kết quả': 'Export Results',
-        'Export Results': 'Export Results',
-        
-        // Results
-        'Kết quả kiểm tra': 'Check Results',
-        'Check Results': 'Check Results',
-        '0 kết quả': '0 results',
-        '0 results': '0 results',
-        'STT': 'No.',
-        'No.': 'No.',
-        'Mã Promotion': 'Promo Code',
-        'Promo Code': 'Promo Code',
-        'Trạng thái': 'Status',
-        'Status': 'Status',
-        'Chi tiết': 'Details',
-        'Details': 'Details',
-        'Thời gian': 'Time',
-        'Time': 'Time',
-        'Thao tác': 'Actions',
-        'Actions': 'Actions',
-        
-        // Input
-        'Danh sách mã promotion': 'Promotion Codes List',
-        'Promotion Codes List': 'Promotion Codes List',
-        'Loại bỏ trùng': 'Remove Duplicates',
-        'Remove Duplicates': 'Remove Duplicates',
-        'Xóa tất cả': 'Clear All',
-        'Clear All': 'Clear All',
-        'Thêm mã mẫu': 'Add Samples',
-        'Add Samples': 'Add Samples',
-        
-        // Messages
-        '0 mã': '0 codes',
-        '0 codes': '0 codes',
-        
-    }
-};
-
-// Language Manager Class
-class LanguageManager {
-    constructor() {
-        this.currentLanguage = 'vi'; // Default Vietnamese
-        this.init();
-    }
     
-    init() {
-        // Get saved language or default to Vietnamese
-        const savedLang = localStorage.getItem('promo-checker-lang') || 'vi';
-        this.setLanguage(savedLang);
+    // Send batch Telegram notification
+    async sendBatchNotification() {
+        if (this.notificationQueue.length === 0) return;
         
-        // Bind language toggle button
-        const langBtn = document.getElementById('langBtn');
-        if (langBtn) {
-            langBtn.addEventListener('click', () => this.toggleLanguage());
-        }
-    }
-    
-    toggleLanguage() {
-        const newLang = this.currentLanguage === 'vi' ? 'en' : 'vi';
-        this.setLanguage(newLang);
-    }
-    
-    setLanguage(lang) {
-        this.currentLanguage = lang;
-        localStorage.setItem('promo-checker-lang', lang);
-        
-        // Update language indicator
-        const currentLangEl = document.getElementById('currentLang');
-        if (currentLangEl) {
-            currentLangEl.textContent = lang.toUpperCase();
-        }
-        
-        // Translate all text elements
-        this.translatePage();
-    }
-    
-    translatePage() {
-        // Translate elements with text content
-        const elementsToTranslate = [
-            // Headers
-            '.header-subtitle',
-            
-            // Labels
-            'label[for="concurrency"]',
-            'label[for="delay"]', 
-            'label[for="authToken"]',
-            
-            // Options
-            'option[value="3"]',
-            'option[value="5"]',
-            'option[value="10"]',
-            'option[value="15"]',
-            
-            // Buttons
-            '#startBtn span:last-child',
-            '#stopBtn span:last-child',
-            '#toggleTokenBtn',
-            '#getTokenBtn',
-            '#testTokenBtn',
-            '#exportVietnamBtn span:last-child',
-            '#exportSingaporeBtn span:last-child',
-            '#removeDuplicatesBtn span:last-child',
-            '#clearCodesBtn span:last-child',
-            '#addSampleBtn span:last-child',
-            
-            // Stats labels
-            '.stat-label',
-            
-            // Filter buttons
-            '.filter-btn',
-            
-            // Table headers
-            '.results-table th',
-            
-            // Section headers
-            '.results-header h2',
-            '.input-header h3',
-            
-            // Other text elements
-            '#progressText',
-            '#resultsCount',
-            '#codesCount'
-        ];
-        
-        elementsToTranslate.forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(element => {
-                const currentText = element.textContent.trim();
-                const translatedText = this.translate(currentText);
-                if (translatedText !== currentText) {
-                    element.textContent = translatedText;
-                }
+        try {
+            const response = await fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ results: this.notificationQueue })
             });
-        });
-        
-        // Translate placeholders
-        this.translatePlaceholders();
-        
-        // Translate ad popup
-        this.translateAdPopup();
-    }
-    
-    translatePlaceholders() {
-        // Search input placeholder
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            const currentPlaceholder = searchInput.placeholder;
-            const translatedPlaceholder = this.translate(currentPlaceholder);
-            if (translatedPlaceholder !== currentPlaceholder) {
-                searchInput.placeholder = translatedPlaceholder;
+            
+            if (response.ok) {
+                console.log('✅ Sent Telegram notification');
             }
+        } catch (error) {
+            console.warn('Telegram notification error:', error);
+        } finally {
+            this.notificationQueue = [];
         }
-        
-        // Token input placeholder
-        const authTokenInput = document.getElementById('authToken');
-        if (authTokenInput) {
-            const currentPlaceholder = authTokenInput.placeholder;
-            const translatedPlaceholder = this.translate(currentPlaceholder);
-            if (translatedPlaceholder !== currentPlaceholder) {
-                authTokenInput.placeholder = translatedPlaceholder;
-            }
-        }
-    }
-    
-    translateAdPopup() {
-        // Ad popup elements
-        const adElements = [
-            '.ad-header h3',
-            '.ad-item h4',
-            '.ad-item p',
-            '.ad-btn',
-            '.ad-cta small'
-        ];
-        
-        adElements.forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(element => {
-                const currentText = element.textContent.trim();
-                const translatedText = this.translate(currentText);
-                if (translatedText !== currentText) {
-                    element.textContent = translatedText;
-                }
-            });
-        });
-    }
-    
-    translate(text) {
-        return translations[this.currentLanguage][text] || text;
     }
 }
 
 // Initialize the application
 let promoChecker;
-let languageManager;
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize language manager first
-    languageManager = new LanguageManager();
-    
-    // Then initialize promo checker
     promoChecker = new PromoChecker();
 });
-

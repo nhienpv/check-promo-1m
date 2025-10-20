@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-  
 </head>
 <body>
     <div class="container">
@@ -20,12 +19,6 @@
                 </div>
                 <div class="header-subtitle">
                     Multi-threaded Promotion Code Validator
-                </div>
-                <div class="language-toggle">
-                    <button id="langBtn" class="btn btn-outline">
-                        <span class="material-icons">language</span>
-                        <span id="currentLang">VI</span>
-                    </button>
                 </div>
             </div>
         </header>
@@ -47,11 +40,11 @@
                     <input type="number" id="delay" value="500" min="0" max="5000" step="100">
                 </div>
                 
-                <!-- Token được tự động load từ config.js - Ẩn để bảo mật -->
+                <!-- Token input hidden - using server-side token from Vercel env -->
                 <div class="setting-group token-group" style="display: none;">
                     <label for="authToken">Authorization Token:</label>
                     <div class="token-input-container">
-                        <input type="password" id="authToken" placeholder="Auto-loaded from config.js" style="min-width: 300px;">
+                        <input type="password" id="authToken" placeholder="Server-side token" style="min-width: 300px;">
                         <button type="button" class="btn btn-outline" id="toggleTokenBtn" title="Hiện/Ẩn token">
                             <span class="material-icons">visibility</span>
                         </button>
@@ -85,7 +78,7 @@
                     </div>
                     <div class="stat-content">
                         <div class="stat-number" id="liveCount">0</div>
-                        <div class="stat-label">Mã LIVE (Singapore/Malaysia)</div>
+                        <div class="stat-label">Mã LIVE<br><small>(Singapore/Malaysia)</small></div>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -98,12 +91,12 @@
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon live">
-                        <span class="material-icons">check_circle</span>
+                    <div class="stat-icon ineligible">
+                        <span class="material-icons">block</span>
                     </div>
                     <div class="stat-content">
                         <div class="stat-number" id="ineligibleCount">0</div>
-                        <div class="stat-label">Mã LIVE (Vietnam)</div>
+                        <div class="stat-label">Mã INELIGIBLE<br><small>(Vietnam)</small></div>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -140,7 +133,7 @@
                 <div class="duplicate-header">
                     <h4>
                         <span class="material-icons">warning</span>
-                        List of duplicate codes
+                        Danh sách mã trùng lặp
                     </h4>
                 </div>
                 <div class="duplicate-list" id="duplicateList"></div>
@@ -166,13 +159,13 @@
                 </div>
                 <div class="filter-buttons">
                     <button class="filter-btn active" data-filter="all">Tất cả</button>
-                    <button class="filter-btn" data-filter="live">LIVE (Singapore/Malaysia)</button>
+                    <button class="filter-btn" data-filter="live">LIVE (SG/MY)</button>
                     <button class="filter-btn" data-filter="dead">DEAD</button>
-                    <button class="filter-btn" data-filter="ineligible">LIVE (Vietnam)</button>
+                    <button class="filter-btn" data-filter="ineligible">INELIGIBLE (VN)</button>
                     <button class="filter-btn" data-filter="checking">Đang kiểm tra</button>
                 </div>
                 <div class="export-buttons">
-                    <button id="exportVietnamBtn" class="btn btn-outline">
+                    <button id="exportBtn" class="btn btn-outline">
                         <span class="material-icons">download</span>
                         Xuất Mã Việt Nam
                     </button>

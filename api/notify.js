@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -33,17 +33,22 @@ export default async function handler(req, res) {
 
   const section = (title, arr) => {
     if (arr.length === 0) return '';
-    let s = `📌 <b>${title}</b>: ${arr.length} ma\n`;
-    for (const r of arr) {
-      s += `• 🕐 ${r.timestamp}\n`;
-      s += `• 🔗 https://chatgpt.com/p/${r.code}\n`;
-      s += `  💬 ${r.details}\n\n`;
+    let s = `<b>${title}: ${arr.length} ma</b>\n`;
+    // Get time and details from first item
+    if (arr.length > 0) {
+      s += `🕐 ${arr[0].timestamp}\n`;
+      s += `💬 ${arr[0].details}\n`;
     }
+    // List all links
+    for (const r of arr) {
+      s += `https://chatgpt.com/p/${r.code}\n`;
+    }
+    s += '\n';
     return s;
   };
 
-  msg += section('Ma LIVE (Vietnam)', vn);
   msg += section('Ma LIVE (Singapore/Malaysia)', sg);
+  msg += section('Ma INELIGIBLE (Vietnam)', vn);
 
   try {
     const url = `https://api.telegram.org/bot${bot}/sendMessage`;
@@ -67,5 +72,5 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-}
+};
 

@@ -1,0 +1,14 @@
+[build]
+  publish = "."
+  command = ""
+
+[[redirects]]
+  from = "/backend-api/*"
+  to = "https://chatgpt.com/backend-api/:splat"
+  status = 200
+  force = true
+  headers = {X-From = "Netlify"}
+
+[build.environment]
+  NODE_VERSION = "18"
+
