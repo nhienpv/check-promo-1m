@@ -1,7 +1,4 @@
 [build]
   command = ""
   publish = "."
-
-[[edge_functions]]
-path = "/backend-api/*"
-function = "proxy"
+  functions = "netlify/functions"

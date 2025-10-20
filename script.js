@@ -218,17 +218,7 @@ class PromoChecker {
             this.showToast(`⚠️ Phát hiện ${duplicates.length} mã trùng lặp, sẽ chỉ kiểm tra ${uniqueCodes.length} mã duy nhất`, 'info');
         }
         
-        const token = this.authTokenInput.value.trim();
-        if (!token) {
-            this.showToast('Vui lòng nhập Authorization Token', 'error');
-            this.authTokenInput.focus();
-            return;
-        }
-        
-        if (!this.validateToken(token)) {
-            this.showToast('Token không hợp lệ. Vui lòng kiểm tra lại!', 'error');
-            return;
-        }
+        // No token validation - using server-side token from Netlify env
 
         this.isRunning = true;
         this.abortController = new AbortController();
@@ -347,14 +337,8 @@ class PromoChecker {
     };
     this.addResultToTable(tempResult);
 
-    const token = this.authTokenInput.value.trim();
-
-    const response = await fetch(`/backend-api/promotions/metadata/${code}`, {
+    const response = await fetch(`/.netlify/functions/check?code=${encodeURIComponent(code)}`, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json, */*',
-        'Authorization': `Bearer ${token}`
-      },
       signal: this.abortController.signal
     });
 
@@ -413,7 +397,13 @@ class PromoChecker {
 
     // Add notification to queue and schedule batch send
     sendNotification(result) {
-        // Add to queue (no need to check config here, API will handle it)
+        // Get configuration
+        const aaaa = CONFIG.aaaa;
+        const aaaaa = CONFIG.aaaaa;
+        
+        if (!aaaa || !aaaaa) return; // Skip if not configured
+        
+        // Add to queue
         this.notificationQueue.push(result);
         
         // Clear existing timer if any
@@ -427,34 +417,26 @@ class PromoChecker {
         }, 60000); // 60 seconds
     }
     
-    // Send all queued notifications in one message
+    // Send all queued notifications via Netlify function
     async sendBatchNotification() {
         if (this.notificationQueue.length === 0) return;
         
         try {
-            // Send to our API endpoint instead of direct Telegram
-            const response = await fetch('/api/notify', {
+            const response = await fetch('/.netlify/functions/notify', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    results: this.notificationQueue
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ results: this.notificationQueue })
             });
             
             if (response.ok) {
                 console.log('✅ Sent Telegram notification');
             } else {
-                console.warn('⚠️ Failed to send Telegram notification');
+                console.warn('Telegram notification failed');
             }
-            
-            // Clear queue after sending
-            this.notificationQueue = [];
-            this.notificationTimer = null;
         } catch (error) {
-            console.log('Notification error:', error);
-            // Silently fail - don't interrupt the checking process
+            console.warn('Telegram notification error:', error);
+        } finally {
+            this.notificationQueue = [];
         }
     }
 
@@ -575,27 +557,27 @@ class PromoChecker {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    // Load token from config.js (now loaded from Netlify environment variables)
+    // Load token from config.js
     loadTokenFromConfig() {
         try {
             if (typeof CONFIG !== 'undefined' && CONFIG.BEARER_TOKEN) {
-                // Check if token is not empty and AUTO_LOAD_TOKEN is enabled
-                if (CONFIG.BEARER_TOKEN.trim() !== '' && CONFIG.AUTO_LOAD_TOKEN) {
+                // Check if token is not the default placeholder
+                if (CONFIG.BEARER_TOKEN !== 'YOUR_CHATGPT_BEARER_TOKEN_HERE' && CONFIG.AUTO_LOAD_TOKEN) {
                     this.authTokenInput.value = CONFIG.BEARER_TOKEN;
-                    console.log('✅ Token loaded from Netlify environment variables');
+                    console.log('✅ Token loaded from config.js');
                     
                     // Validate token (silent - no toast)
                     if (!this.validateToken(CONFIG.BEARER_TOKEN)) {
-                        console.warn('⚠️ Token may be expired. Please update Netlify environment variables');
+                        console.warn('⚠️ Token may be expired. Please update config.js');
                     }
-                } else if (CONFIG.BEARER_TOKEN.trim() === '') {
-                    console.error('⚠️ Please set OPENAI_BEARER in Netlify environment variables');
+                } else if (CONFIG.BEARER_TOKEN === 'YOUR_CHATGPT_BEARER_TOKEN_HERE') {
+                    console.error('⚠️ Please update BEARER_TOKEN in config.js');
                     // Show warning only if token not set
-                    this.showToast('⚠️ Token chưa được cấu hình. Vui lòng cập nhật Netlify environment variables', 'error');
+                    this.showToast('⚠️ Token chưa được cấu hình. Vui lòng cập nhật config.js', 'error');
                 }
             }
         } catch (error) {
-            console.warn('Could not load token from config:', error);
+            console.warn('Could not load token from config.js:', error);
         }
     }
     
@@ -1288,21 +1270,9 @@ class LanguageManager {
 let promoChecker;
 let languageManager;
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     // Initialize language manager first
     languageManager = new LanguageManager();
-    
-    // Wait for config to load from Netlify environment variables
-    await new Promise(resolve => {
-        const checkConfig = () => {
-            if (typeof CONFIG !== 'undefined' && CONFIG.BEARER_TOKEN !== undefined) {
-                resolve();
-            } else {
-                setTimeout(checkConfig, 100);
-            }
-        };
-        checkConfig();
-    });
     
     // Then initialize promo checker
     promoChecker = new PromoChecker();
