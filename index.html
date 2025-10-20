@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Promo Code Checker - Multi-threaded</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+  
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="material-icons">verified</span>
+                    <h1>ChatGPT Promo Checker</h1>
+                </div>
+                <div class="header-subtitle">
+                    Multi-threaded Promotion Code Validator
+                </div>
+                <div class="language-toggle">
+                    <button id="langBtn" class="btn btn-outline">
+                        <span class="material-icons">language</span>
+                        <span id="currentLang">VI</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="settings-row">
+                <div class="setting-group">
+                    <label for="concurrency">Số luồng đồng thời:</label>
+                    <select id="concurrency">
+                        <option value="3">3 luồng</option>
+                        <option value="5" selected>5 luồng</option>
+                        <option value="10">10 luồng</option>
+                        <option value="15">15 luồng</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="delay">Delay giữa các request (ms):</label>
+                    <input type="number" id="delay" value="500" min="0" max="5000" step="100">
+                </div>
+                
+                <!-- Token được tự động load từ config.js - Ẩn để bảo mật -->
+                <div class="setting-group token-group" style="display: none;">
+                    <label for="authToken">Authorization Token:</label>
+                    <div class="token-input-container">
+                        <input type="password" id="authToken" placeholder="Auto-loaded from config.js" style="min-width: 300px;">
+                        <button type="button" class="btn btn-outline" id="toggleTokenBtn" title="Hiện/Ẩn token">
+                            <span class="material-icons">visibility</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="getTokenBtn" title="Hướng dẫn lấy token">
+                            <span class="material-icons">help</span>
+                        </button>
+                        <button type="button" class="btn btn-info" id="testTokenBtn" title="Kiểm tra token">
+                            <span class="material-icons">verified</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <button id="startBtn" class="btn btn-primary">
+                        <span class="material-icons">play_arrow</span>
+                        Bắt đầu kiểm tra
+                    </button>
+                    <button id="stopBtn" class="btn btn-secondary" disabled>
+                        <span class="material-icons">stop</span>
+                        Dừng lại
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-section">
+            <div class="progress-stats">
+                <div class="stat-card">
+                    <div class="stat-icon live">
+                        <span class="material-icons">check_circle</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="liveCount">0</div>
+                        <div class="stat-label">Mã LIVE (Singapore/Malaysia)</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon dead">
+                        <span class="material-icons">cancel</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="deadCount">0</div>
+                        <div class="stat-label">Mã DEAD</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon live">
+                        <span class="material-icons">check_circle</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="ineligibleCount">0</div>
+                        <div class="stat-label">Mã LIVE (Vietnam)</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon total">
+                        <span class="material-icons">assessment</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalCount">0</div>
+                        <div class="stat-label">Tổng số</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon rate">
+                        <span class="material-icons">trending_up</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="successRate">0%</div>
+                        <div class="stat-label">Tỷ lệ thành công</div>
+                    </div>
+                </div>
+                <div class="stat-card" id="duplicatesStatCard" style="display: none;">
+                    <div class="stat-icon duplicates">
+                        <span class="material-icons">content_copy</span>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="duplicatesCount">0</div>
+                        <div class="stat-label">Mã trùng lặp</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Duplicate Codes Details -->
+            <div class="duplicate-details" id="duplicateDetails" style="display: none;">
+                <div class="duplicate-header">
+                    <h4>
+                        <span class="material-icons">warning</span>
+                        List of duplicate codes
+                    </h4>
+                </div>
+                <div class="duplicate-list" id="duplicateList"></div>
+            </div>
+            
+            <div class="progress-bar-container">
+                <div class="progress-info">
+                    <span id="progressText">Sẵn sàng kiểm tra...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="filter-section">
+            <div class="filter-controls">
+                <div class="search-box">
+                    <span class="material-icons">search</span>
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm mã promotion...">
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">Tất cả</button>
+                    <button class="filter-btn" data-filter="live">LIVE (Singapore/Malaysia)</button>
+                    <button class="filter-btn" data-filter="dead">DEAD</button>
+                    <button class="filter-btn" data-filter="ineligible">LIVE (Vietnam)</button>
+                    <button class="filter-btn" data-filter="checking">Đang kiểm tra</button>
+                </div>
+                <div class="export-buttons">
+                    <button id="exportVietnamBtn" class="btn btn-outline">
+                        <span class="material-icons">download</span>
+                        Xuất Mã Việt Nam
+                    </button>
+                    <button id="exportSingaporeBtn" class="btn btn-outline">
+                        <span class="material-icons">download</span>
+                        Xuất Mã Singapore/Malaysia
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="results-section">
+            <div class="results-header">
+                <h2>Kết quả kiểm tra</h2>
+                <div class="results-info">
+                    <span id="resultsCount">0 kết quả</span>
+                </div>
+            </div>
+            <div class="results-container">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Mã Promotion</th>
+                            <th>Trạng thái</th>
+                            <th>Chi tiết</th>
+                            <th>Thời gian</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <!-- Results will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Code Input Section -->
+        <div class="input-section">
+            <div class="input-header">
+                <h3>Danh sách mã promotion</h3>
+                <div class="input-actions">
+                    <button id="removeDuplicatesBtn" class="btn btn-outline">
+                        <span class="material-icons">content_copy</span>
+                        Loại bỏ trùng
+                    </button>
+                    <button id="clearCodesBtn" class="btn btn-outline">
+                        <span class="material-icons">clear</span>
+                        Xóa tất cả
+                    </button>
+                    <button id="addSampleBtn" class="btn btn-outline">
+                        <span class="material-icons">add</span>
+                        Thêm mã mẫu
+                    </button>
+                </div>
+            </div>
+            <div class="input-container">
+                <textarea 
+                    id="promoCodesInput" 
+                    placeholder="Nhập các mã promotion hoặc URL (mỗi mã/link một dòng)...
+Ví dụ:
+XXXXXXXXXXXXXXXX
+https://chatgpt.com/?promoCode=XXXXXXXXXXXXXXXX
+https://chatgpt.com/p/XXXXXXXXXXXXXXXX
+https://chatgpt.com/p/V9TGRZMHATD59D"
+                    rows="10"
+                ></textarea>
+                <div class="input-info">
+                    <span id="codesCount">0 mã</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+    
+    <!-- CORS Help Modal -->
+    <div id="corsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔧 Khắc phục lỗi CORS</h3>
+                <button class="modal-close" onclick="document.getElementById('corsModal').style.display='none'">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Lỗi "Failed to fetch" thường do CORS policy. Có 3 cách khắc phục:</strong></p>
+                
+                <div class="solution">
+                    <h4>🚀 Cách 1: Chrome với CORS disabled (Khuyến nghị)</h4>
+                    <ol>
+                        <li>Tạo shortcut Chrome mới</li>
+                        <li>Thêm flags: <code>--disable-web-security --user-data-dir="C:/temp"</code></li>
+                        <li>Mở tool bằng Chrome này</li>
+                    </ol>
+                </div>
+                
+                <div class="solution">
+                    <h4>🔌 Cách 2: Browser Extension</h4>
+                    <ol>
+                        <li>Cài extension "CORS Unblock" hoặc "CORS Everywhere"</li>
+                        <li>Bật extension</li>
+                        <li>Refresh trang và thử lại</li>
+                    </ol>
+                </div>
+                
+                <div class="solution">
+                    <h4>🌐 Cách 3: Proxy Service</h4>
+                    <ol>
+                        <li>Sử dụng proxy như cors-anywhere</li>
+                        <li>Hoặc chạy local proxy server</li>
+                        <li>Cấu hình trong tool</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
